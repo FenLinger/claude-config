@@ -1,0 +1,6 @@
+skills: all
+
+claude_md:
+  base: true
+  sections:
+    - does-not-exist

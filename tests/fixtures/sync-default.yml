@@ -1,0 +1,14 @@
+# Claude Config Sync — Consumer Configuration
+#
+# This file declares what this repo receives from FenLinger/claude-config.
+# Edit the sections list to include optional CLAUDE.md sections.
+# Available sections can be found in claude-config/claude-md/sections/.
+
+skills: all
+
+claude_md:
+  base: true
+  sections: []
+  # Example: uncomment to include the plan-workflow section
+  # sections:
+  #   - plan-workflow
