@@ -63,6 +63,10 @@ parse_sections() {
       continue
     fi
     if [[ $in_sections -eq 1 ]]; then
+      # Skip blank lines and comments
+      if [[ "$line" =~ ^[[:space:]]*$ ]] || [[ "$line" =~ ^[[:space:]]*# ]]; then
+        continue
+      fi
       # List item: "  - name" or "    - name"
       if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+(.*) ]]; then
         sections+=("${BASH_REMATCH[1]}")

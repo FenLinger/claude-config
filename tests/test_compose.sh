@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test_compose.sh — Tests for compose.sh (28 cases)
+# test_compose.sh — Tests for compose.sh (35 cases)
 # Covers: argument parsing, YAML section parsing, section insertion,
 #         skills section generation, and end-to-end composition.
 
@@ -268,6 +268,71 @@ if grep -q "Alpha" "$out" && ! grep -q "other_key" "$out"; then
   pass "1.2.6 Sections followed by other YAML keys"
 else
   fail "1.2.6 Sections followed by other YAML keys"
+fi
+teardown_tmp
+
+# 1.2.7 Comment before list items
+setup_tmp
+cat > "$TMPDIR_TEST/config.yml" <<'YAML'
+claude_md:
+  sections:
+  # this is a comment
+    - plan-workflow
+YAML
+out="$TMPDIR_TEST/out.md"
+bash "$COMPOSE" \
+    --base "$FIXTURES/base-minimal.md" \
+    --config "$TMPDIR_TEST/config.yml" \
+    --sections-dir "$REPO_ROOT/claude-md/sections" \
+    --output "$out" 2>/dev/null
+if grep -q "Plan and Implementation Workflow" "$out"; then
+  pass "1.2.7 Comment before list items — skipped correctly"
+else
+  fail "1.2.7 Comment before list items"
+fi
+teardown_tmp
+
+# 1.2.8 Comment between list items
+setup_tmp
+cat > "$TMPDIR_TEST/config.yml" <<'YAML'
+claude_md:
+  sections:
+    - alpha
+    # a comment between items
+    - beta
+YAML
+out="$TMPDIR_TEST/out.md"
+bash "$COMPOSE" \
+    --base "$FIXTURES/base-minimal.md" \
+    --config "$TMPDIR_TEST/config.yml" \
+    --sections-dir "$FIXTURES" \
+    --output "$out" 2>/dev/null
+if grep -q "Alpha" "$out" && grep -q "Beta" "$out"; then
+  pass "1.2.8 Comment between list items — both sections included"
+else
+  fail "1.2.8 Comment between list items"
+fi
+teardown_tmp
+
+# 1.2.9 Blank line within sections list
+setup_tmp
+cat > "$TMPDIR_TEST/config.yml" <<'YAML'
+claude_md:
+  sections:
+    - alpha
+
+    - beta
+YAML
+out="$TMPDIR_TEST/out.md"
+bash "$COMPOSE" \
+    --base "$FIXTURES/base-minimal.md" \
+    --config "$TMPDIR_TEST/config.yml" \
+    --sections-dir "$FIXTURES" \
+    --output "$out" 2>/dev/null
+if grep -q "Alpha" "$out" && grep -q "Beta" "$out"; then
+  pass "1.2.9 Blank line within sections list — both sections included"
+else
+  fail "1.2.9 Blank line within sections list"
 fi
 teardown_tmp
 
