@@ -46,6 +46,15 @@ gh alias set claude-init '!bash -c '"'"'
     --jq ".content" | base64 -d > .github/workflows/sync-claude-config.yml
   gh api repos/FenLinger/claude-config/contents/defaults/.claude-sync.yml \
     --jq ".content" | base64 -d > .claude-sync.yml
+  REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+  if [ -n "$REPO" ]; then
+    gh api "repos/$REPO/actions/permissions/workflow" \
+      --method PUT \
+      -f default_workflow_permissions=write \
+      -F can_approve_pull_request_reviews=true 2>/dev/null \
+      && echo "Enabled Actions PR creation permission." \
+      || echo "Warning: could not set Actions PR permission (need admin access)."
+  fi
   echo "Done. Edit .claude-sync.yml if needed, then commit and push."
 '"'"''
 
@@ -60,7 +69,7 @@ gh alias set claude-sync-now 'workflow run sync-claude-config.yml -f auto_merge=
 
 | Command | Purpose | What happens |
 |---------|---------|--------------|
-| `gh claude-init` | Bootstrap a repo for sync | Fetches workflow + default config from `claude-config`, writes to current repo |
+| `gh claude-init` | Bootstrap a repo for sync | Fetches workflow + default config from `claude-config`, writes to current repo, enables Actions PR creation permission |
 | `gh claude-sync` | Trigger sync (PR for review) | Runs the sync workflow → opens a PR with updated skills + CLAUDE.md |
 | `gh claude-sync-now` | Trigger sync (auto-merge) | Same as above, but immediately merges the PR |
 
