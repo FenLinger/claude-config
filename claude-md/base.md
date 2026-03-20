@@ -57,7 +57,7 @@ When preparing a proposal:
 
 - Review state-of-the-art (SOTA) practice first.
 - Combine that research with domain judgment into a detailed, actionable proposal.
-- Save the proposal under `./proposal/`.
+- Save the proposal under `./proposals/`.
 - Do not move proposal content into `./docs/` unless the user explicitly asks to harden or persist it there.
 
 ## Survey Rules
@@ -72,7 +72,7 @@ When preparing a survey of a technology or algorithm:
 - compare performance, complexity, implementation cost, and engineering tradeoffs
 - review state-of-the-art (SOTA) practice and identify what is actually preferred in modern use
 - close with the likely roadmap, next directions, and open technical gaps
-- save the survey under `./survey/`
+- save the survey under `./surveys/`
 
 ## Math Derivation Rules
 
