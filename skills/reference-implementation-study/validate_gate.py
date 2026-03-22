@@ -2,7 +2,7 @@
 """Quality-gate validator for the reference-implementation-study skill.
 
 Usage:
-    python validate_gate.py <study-name> <gate>
+    python validate_gate.py <study-name> <gate> <topic>
 
 Gates:
     G1  Phase 2 → 3  (Implementation → Baseline)
@@ -35,9 +35,9 @@ def _check(ok: bool, msg: str, results: list[tuple[bool, str]]) -> None:
     results.append((ok, msg))
 
 
-def _find_candidate_modules(study: str) -> list[str]:
-    """Return importable module names under implementation/ (excluding utils)."""
-    impl_dir = REPO_ROOT / "implementation"
+def _find_candidate_modules(study: str, topic: str) -> list[str]:
+    """Return importable module names under implementation/<topic>/ (excluding utils)."""
+    impl_dir = REPO_ROOT / "implementation" / topic
     if not impl_dir.is_dir():
         return []
     return [
@@ -69,37 +69,37 @@ def _npz_loadable(path: Path) -> bool:
 # Gate validators
 # ---------------------------------------------------------------------------
 
-def gate_g1(study: str) -> list[tuple[bool, str]]:
+def gate_g1(study: str, topic: str) -> list[tuple[bool, str]]:
     """G1: Implementation → Baseline."""
     results: list[tuple[bool, str]] = []
 
-    # Check implementation/ exists
-    impl_dir = REPO_ROOT / "implementation"
-    _check(impl_dir.is_dir(), "implementation/ directory exists", results)
+    # Check implementation/<topic>/ exists
+    impl_dir = REPO_ROOT / "implementation" / topic
+    _check(impl_dir.is_dir(), f"implementation/{topic}/ directory exists", results)
 
     # Check utils.py exists
     _check(
         (impl_dir / "utils.py").is_file(),
-        "implementation/utils.py exists",
+        f"implementation/{topic}/utils.py exists",
         results,
     )
 
     # Check candidate modules are importable
-    modules = _find_candidate_modules(study)
+    modules = _find_candidate_modules(study, topic)
     _check(len(modules) >= 2, f"At least 2 candidate modules found ({len(modules)})", results)
 
     sys.path.insert(0, str(REPO_ROOT))
     for mod_name in modules:
         try:
-            importlib.import_module(f"implementation.{mod_name}")
-            _check(True, f"implementation.{mod_name} importable", results)
+            importlib.import_module(f"implementation.{topic}.{mod_name}")
+            _check(True, f"implementation.{topic}.{mod_name} importable", results)
         except Exception as exc:
-            _check(False, f"implementation.{mod_name} import failed: {exc}", results)
+            _check(False, f"implementation.{topic}.{mod_name} import failed: {exc}", results)
     sys.path.pop(0)
 
-    # Check tests/ exists
-    tests_dir = REPO_ROOT / "tests"
-    _check(tests_dir.is_dir(), "tests/ directory exists", results)
+    # Check tests/<topic>/ exists
+    tests_dir = REPO_ROOT / "tests" / topic
+    _check(tests_dir.is_dir(), f"tests/{topic}/ directory exists", results)
 
     # Run pytest
     proc = subprocess.run(
@@ -110,7 +110,7 @@ def gate_g1(study: str) -> list[tuple[bool, str]]:
     )
     _check(
         proc.returncode == 0,
-        f"pytest tests/ passes (rc={proc.returncode})",
+        f"pytest tests/{topic}/ passes (rc={proc.returncode})",
         results,
     )
     if proc.returncode != 0:
@@ -246,13 +246,20 @@ GATES = {
 
 
 def main() -> int:
-    if len(sys.argv) != 3 or sys.argv[2].upper() not in GATES:
-        print(f"Usage: {sys.argv[0]} <study-name> <G1|G2|G3|G4>", file=sys.stderr)
+    if len(sys.argv) < 3 or sys.argv[2].upper() not in GATES:
+        print(f"Usage: {sys.argv[0]} <study-name> <G1|G2|G3|G4> [<topic>]", file=sys.stderr)
         return 2
 
     study = sys.argv[1]
     gate = sys.argv[2].upper()
-    results = GATES[gate](study)
+    topic = sys.argv[3] if len(sys.argv) > 3 else study
+
+    gate_fn = GATES[gate]
+    # G1 requires topic; G2–G4 only use study-namespaced artifact paths
+    if gate == "G1":
+        results = gate_fn(study, topic)
+    else:
+        results = gate_fn(study)
 
     passed = sum(1 for ok, _ in results if ok)
     failed = sum(1 for ok, _ in results if not ok)

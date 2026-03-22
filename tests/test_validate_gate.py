@@ -95,6 +95,12 @@ class TestCLI(TestCase):
         # Will fail on checks (no implementation/ dir) but rc should be 1, not 2
         self.assertIn(r.returncode, (0, 1))
 
+    def test_2_1_6_optional_topic_argument(self):
+        """Topic is optional — when omitted, defaults to study name."""
+        r = run_gate_cli("study-name", "G1", "custom-topic")
+        # Will fail on checks but rc should be 1, not 2 (usage error)
+        self.assertIn(r.returncode, (0, 1))
+
 
 # ===================================================================
 # 2.2 Gate G1 — Implementation → Baseline
@@ -103,17 +109,18 @@ class TestCLI(TestCase):
 class TestGateG1(_GateTestBase):
     """2.2 Gate G1 tests."""
 
-    def _setup_g1_passing(self, study="test-study"):
+    def _setup_g1_passing(self, study="test-study", topic="test-study"):
         """Set up a fully passing G1 fixture."""
-        impl = self.tmpdir / "implementation"
-        impl.mkdir()
+        impl = self.tmpdir / "implementation" / topic
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
         (impl / "utils.py").write_text("# utils\n")
         (impl / "method_a.py").write_text("# method a\nvalue = 1\n")
         (impl / "method_b.py").write_text("# method b\nvalue = 2\n")
 
-        tests = self.tmpdir / "tests"
-        tests.mkdir()
+        tests = self.tmpdir / "tests" / topic
+        tests.mkdir(parents=True)
         (tests / "__init__.py").write_text("")
         (tests / "test_basic.py").write_text(
             "def test_pass(): assert True\n"
@@ -121,97 +128,126 @@ class TestGateG1(_GateTestBase):
 
     def test_2_2_1_all_passing(self):
         self._setup_g1_passing()
-        results = self.mod.gate_g1("test-study")
+        results = self.mod.gate_g1("test-study", "test-study")
         fails = [msg for ok, msg in results if not ok]
         self.assertEqual(fails, [], f"Unexpected failures: {fails}")
 
     def test_2_2_2_missing_implementation_dir(self):
-        results = self.mod.gate_g1("test-study")
+        results = self.mod.gate_g1("test-study", "test-study")
         ok_map = {msg: ok for ok, msg in results}
         self.assertFalse(
-            ok_map.get("implementation/ directory exists", True),
-            "Should fail when implementation/ missing",
+            ok_map.get("implementation/test-study/ directory exists", True),
+            "Should fail when implementation/<topic>/ missing",
         )
 
     def test_2_2_3_missing_utils_py(self):
-        impl = self.tmpdir / "implementation"
-        impl.mkdir()
+        impl = self.tmpdir / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
         (impl / "method_a.py").write_text("value=1\n")
         (impl / "method_b.py").write_text("value=2\n")
-        results = self.mod.gate_g1("test-study")
+        results = self.mod.gate_g1("test-study", "test-study")
         ok_map = {msg: ok for ok, msg in results}
         self.assertFalse(
-            ok_map.get("implementation/utils.py exists", True),
+            ok_map.get("implementation/test-study/utils.py exists", True),
             "Should fail when utils.py missing",
         )
 
     def test_2_2_4_only_1_candidate(self):
-        impl = self.tmpdir / "implementation"
-        impl.mkdir()
+        impl = self.tmpdir / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
         (impl / "utils.py").write_text("")
         (impl / "method_a.py").write_text("value=1\n")
-        results = self.mod.gate_g1("test-study")
+        results = self.mod.gate_g1("test-study", "test-study")
         found = [msg for ok, msg in results if "At least 2" in msg and not ok]
         self.assertTrue(len(found) >= 1, "Should fail with only 1 candidate")
 
     def test_2_2_5_candidate_import_fails(self):
-        impl = self.tmpdir / "implementation"
-        impl.mkdir()
+        impl = self.tmpdir / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
         (impl / "utils.py").write_text("")
         (impl / "method_a.py").write_text("value=1\n")
         (impl / "method_b.py").write_text("raise ImportError('broken')\n")
-        results = self.mod.gate_g1("test-study")
+        results = self.mod.gate_g1("test-study", "test-study")
         import_fails = [msg for ok, msg in results if "import failed" in msg]
         self.assertTrue(len(import_fails) >= 1, "Should report import failure")
 
     def test_2_2_6_no_tests_directory(self):
-        impl = self.tmpdir / "implementation"
-        impl.mkdir()
+        impl = self.tmpdir / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
         (impl / "utils.py").write_text("")
         (impl / "method_a.py").write_text("value=1\n")
         (impl / "method_b.py").write_text("value=2\n")
-        results = self.mod.gate_g1("test-study")
+        results = self.mod.gate_g1("test-study", "test-study")
         ok_map = {msg: ok for ok, msg in results}
         self.assertFalse(
-            ok_map.get("tests/ directory exists", True),
-            "Should fail when tests/ missing",
+            ok_map.get("tests/test-study/ directory exists", True),
+            "Should fail when tests/<topic>/ missing",
         )
 
     def test_2_2_7_pytest_fails(self):
-        impl = self.tmpdir / "implementation"
-        impl.mkdir()
+        impl = self.tmpdir / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
         (impl / "utils.py").write_text("")
         (impl / "method_a.py").write_text("value=1\n")
         (impl / "method_b.py").write_text("value=2\n")
-        tests = self.tmpdir / "tests"
-        tests.mkdir()
+        tests = self.tmpdir / "tests" / "test-study"
+        tests.mkdir(parents=True)
         (tests / "__init__.py").write_text("")
         (tests / "test_fail.py").write_text("def test_fail(): assert False\n")
-        results = self.mod.gate_g1("test-study")
+        results = self.mod.gate_g1("test-study", "test-study")
         pytest_results = [msg for ok, msg in results if "pytest" in msg.lower() and not ok]
         self.assertTrue(len(pytest_results) >= 1, "Should fail when pytest fails")
 
     def test_2_2_8_init_and_pycache_excluded(self):
-        impl = self.tmpdir / "implementation"
-        impl.mkdir()
+        impl = self.tmpdir / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
         (impl / "utils.py").write_text("")
         pycache = impl / "__pycache__"
         pycache.mkdir()
         (pycache / "cached.pyc").write_text("")
         (impl / "method_a.py").write_text("value=1\n")
         (impl / "method_b.py").write_text("value=2\n")
-        candidates = self.mod._find_candidate_modules("test-study")
+        candidates = self.mod._find_candidate_modules("test-study", "test-study")
         self.assertNotIn("__init__", candidates)
         self.assertNotIn("utils", candidates)
         self.assertNotIn("__pycache__", candidates)
         self.assertIn("method_a", candidates)
         self.assertIn("method_b", candidates)
+
+    def test_2_2_9_custom_topic_separate_from_study(self):
+        """Topic can differ from study name (e.g., study='prach-receiver', topic='prach')."""
+        impl = self.tmpdir / "implementation" / "prach"
+        impl.mkdir(parents=True)
+        (impl / "__init__.py").write_text("")
+        (impl.parent / "__init__.py").write_text("")
+        (impl / "utils.py").write_text("# utils\n")
+        (impl / "method_a.py").write_text("value = 1\n")
+        (impl / "method_b.py").write_text("value = 2\n")
+
+        tests = self.tmpdir / "tests" / "prach"
+        tests.mkdir(parents=True)
+        (tests / "__init__.py").write_text("")
+        (tests / "test_basic.py").write_text("def test_pass(): assert True\n")
+
+        results = self.mod.gate_g1("prach-receiver", "prach")
+        fails = [msg for ok, msg in results if not ok]
+        self.assertEqual(fails, [], f"Unexpected failures: {fails}")
+        # Verify topic appears in messages, not study name
+        all_msgs = [msg for _, msg in results]
+        topic_msgs = [m for m in all_msgs if "prach" in m]
+        self.assertTrue(len(topic_msgs) >= 1, "Topic 'prach' should appear in check messages")
 
 
 # ===================================================================
