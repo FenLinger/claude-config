@@ -120,19 +120,20 @@ class TestConsumerSideExecution(TestCase):
         """G1 from consumer path — using patched REPO_ROOT."""
         consumer, gate_script = self._setup_consumer_repo()
 
-        impl = consumer / "implementation"
-        impl.mkdir()
+        impl = consumer / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("", encoding="utf-8")
+        (impl.parent / "__init__.py").write_text("", encoding="utf-8")
         (impl / "utils.py").write_text("# utils\n", encoding="utf-8")
         (impl / "method_a.py").write_text("value = 1\n", encoding="utf-8")
         (impl / "method_b.py").write_text("value = 2\n", encoding="utf-8")
-        tests = consumer / "tests"
-        tests.mkdir()
+        tests = consumer / "tests" / "test-study"
+        tests.mkdir(parents=True)
         (tests / "__init__.py").write_text("", encoding="utf-8")
         (tests / "test_basic.py").write_text("def test_pass(): assert True\n", encoding="utf-8")
 
         mod = _load_module_with_root(gate_script, consumer)
-        results = mod.gate_g1("test-study")
+        results = mod.gate_g1("test-study", "test-study")
         fails = [msg for ok, msg in results if not ok]
         self.assertEqual(fails, [], f"G1 from consumer path failed: {fails}")
 
@@ -177,22 +178,23 @@ class TestConsumerSideExecution(TestCase):
         self.assertEqual(fails, [], f"G2 from consumer path failed: {fails}")
 
     def test_5_2_3_import_path_setup(self):
-        """Verify sys.path manipulation finds implementation/ at consumer root."""
+        """Verify sys.path manipulation finds implementation/<topic>/ at consumer root."""
         consumer, gate_script = self._setup_consumer_repo()
 
-        impl = consumer / "implementation"
-        impl.mkdir()
+        impl = consumer / "implementation" / "test-study"
+        impl.mkdir(parents=True)
         (impl / "__init__.py").write_text("", encoding="utf-8")
+        (impl.parent / "__init__.py").write_text("", encoding="utf-8")
         (impl / "utils.py").write_text("MARKER = 'consumer_root'\n", encoding="utf-8")
         (impl / "method_a.py").write_text("value = 1\n", encoding="utf-8")
         (impl / "method_b.py").write_text("value = 2\n", encoding="utf-8")
-        tests = consumer / "tests"
-        tests.mkdir()
+        tests = consumer / "tests" / "test-study"
+        tests.mkdir(parents=True)
         (tests / "__init__.py").write_text("", encoding="utf-8")
         (tests / "test_basic.py").write_text("def test_pass(): assert True\n", encoding="utf-8")
 
         mod = _load_module_with_root(gate_script, consumer)
-        results = mod.gate_g1("test-study")
+        results = mod.gate_g1("test-study", "test-study")
         import_results = [msg for ok, msg in results if "importable" in msg]
         self.assertTrue(
             len(import_results) >= 2,

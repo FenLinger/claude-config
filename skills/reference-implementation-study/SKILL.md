@@ -15,7 +15,7 @@ Prefer this workflow when the user wants to move from "what methods exist" to "w
 
 Before starting, verify that the following exist:
 
-- A completed survey under `./survey/` with method inventory and first-principles derivations.
+- A completed survey under `./surveys/` with method inventory and first-principles derivations.
 - A clear problem domain (signal type, impairment model, target platform or application).
 
 If either is missing, run `deep-research-survey` first or ask the user to supply the gap.
@@ -52,20 +52,20 @@ Use these phases unless the user asks for a faster path.
   - Typical patterns: `.filter(x)`, `.run(x)`, `.estimate(x)`, `.process(x)` — pick the verb that fits the domain.
   - Return `(output, telemetry_dict)` so callers can inspect internals without coupling to them.
   - Support a `.replay(x, state_history)` method when the algorithm has time-varying internal state.
-- Extract shared helpers into `implementation/utils.py`:
+- Extract shared helpers into `implementation/<topic>/utils.py`:
   - Quantisation helpers (with optional saturation via `integer_bits`).
   - Signal generators (tones, noise, modulated waveforms).
   - Metric functions (EVM, SNR, MSE, BER — whatever Phase 1 defined).
   - Named numerical-safety constants (`EPSILON_DIV`, etc.).
 - Each implementation must be **pure**: deterministic given config + input, explicit random seeds, no hidden mutable state.
-- Place source files under `implementation/`.
-- Add or extend tests under `tests/` to cover utilities and basic correctness for each candidate.
+- Place source files under `implementation/<topic>/`.
+- Add or extend tests under `tests/<topic>/` to cover utilities and basic correctness for each candidate.
 
-**Gate → Phase 3:** Before proceeding, run the full test suite (`pytest tests/`) and verify every candidate passes. If any candidate fails, fix or exclude it before starting the baseline comparison. Record the gate result in the study doc:
+**Gate → Phase 3:** Before proceeding, run the full test suite (`pytest tests/<topic>/`) and verify every candidate passes. If any candidate fails, fix or exclude it before starting the baseline comparison. Record the gate result in the study doc:
 
 ```markdown
 ### Phase 2 → 3 Gate
-- Test command: `pytest tests/ -v`
+- Test command: `pytest tests/<topic>/ -v`
 - Result: PASS / FAIL
 - Candidates cleared: [list]
 - Candidates excluded: [list, with reason]
@@ -188,10 +188,10 @@ python .claude/skills/reference-implementation-study/validate_gate.py <study-nam
 
 - All configs as **frozen dataclasses** with typed fields and sensible defaults.
 - All random seeds **explicit and stored** in the config.
-- Shared helpers in `implementation/utils.py`; domain-specific logic in dedicated modules.
+- Shared helpers in `implementation/<topic>/utils.py`; domain-specific logic in dedicated modules.
 - Named constants for numerical-safety floors (`EPSILON_DIV = 1e-12`, etc.) — no bare magic numbers.
 - Input validation: reject clearly invalid parameters at construction time (`__post_init__`).
-- Tests under `tests/` for utilities, validation, and basic per-candidate correctness.
+- Tests under `tests/<topic>/` for utilities, validation, and basic per-candidate correctness.
 
 ## Math Rules
 
@@ -205,7 +205,7 @@ Inherited from project-level CLAUDE.md:
 
 ```
 deep-research-survey  →  reference-implementation-study
-       survey/                 implementation/ + artifacts/ + docs/
+       surveys/                implementation/<topic>/ + artifacts/ + docs/
 ```
 
 The survey skill produces the method inventory and math. This skill consumes it and produces code, experiments, and a recommendation.
@@ -215,7 +215,7 @@ The survey skill produces the method inventory and math. This skill consumes it 
 If the user only says "implement and compare the methods from the survey", rewrite internally as:
 
 ```text
-Using the completed survey under ./survey/, frame a canonical evaluation
+Using the completed survey under ./surveys/, frame a canonical evaluation
 scenario with explicit signal model, metrics, and constraints. Implement the
 top 3–4 candidate methods as frozen-dataclass reference modules with a shared
 utility layer. Run a baseline comparison, sweep key hyperparameters, and
@@ -230,9 +230,9 @@ alternatives are preferred.
 At skill completion, the following should exist:
 
 - [ ] `docs/<topic>-implementation-study.md` — full written study with equations, figures, CI error bars, red-team critique, and recommendation.
-- [ ] `implementation/<module>.py` — reference implementations for each candidate.
-- [ ] `implementation/utils.py` — shared utilities (extended if pre-existing).
-- [ ] `tests/test_<module>.py` — unit tests covering utilities + per-candidate basics.
+- [ ] `implementation/<topic>/<module>.py` — reference implementations for each candidate.
+- [ ] `implementation/<topic>/utils.py` — shared utilities (extended if pre-existing).
+- [ ] `tests/<topic>/test_<module>.py` — unit tests covering utilities + per-candidate basics.
 - [ ] `artifacts/<study>/` — at least one subdirectory per phase (baseline, sweeps, precision).
   - Each contains `.json` summary (with mean/std/CI statistics), `.html` interactive figure, and optionally `.npz` raw data.
 - [ ] `artifacts/<study>/study-manifest.json` — versioned iteration log for regression tracking.
