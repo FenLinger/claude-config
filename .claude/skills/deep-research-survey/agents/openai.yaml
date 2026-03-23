@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deep Research Survey"
+  short_description: "Structure deep technical research requests and outputs"
+  default_prompt: "Use the deep-research-survey skill to turn a topic into a rigorous research request and deliverable."
